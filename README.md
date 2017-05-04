@@ -6,6 +6,6 @@ and on WRNs implementation by Florian Muellerklein available at:   https://gist.
 
 Paper: [A Downsampled Variant of ImageNet as an Alternative to the CIFAR datasets](https://arxiv.org) by Patryk Chrabaszcz, Ilya Loshchilov and Frank Hutter 
 
-Post: https://patrykchrabaszcz.github.io/Imagenet32/
+Webpage: https://patrykchrabaszcz.github.io/Imagenet32/
 
 Dataset: https://figshare.com/articles/Imagenet_32/4960082
