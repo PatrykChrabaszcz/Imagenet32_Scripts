@@ -6,7 +6,7 @@ https://gist.github.com/FlorianMuellerklein/3d9ba175038a3f2e7de3794fa303f1ee
 
 
 **Paper**:  
-[A Downsampled Variant of ImageNet as an Alternative to the CIFAR datasets](https://arxiv.org) by Patryk Chrabaszcz, Ilya Loshchilov and Frank Hutter 
+[A Downsampled Variant of ImageNet as an Alternative to the CIFAR datasets](https://arxiv.org/abs/1707.08819) by Patryk Chrabaszcz, Ilya Loshchilov and Frank Hutter 
 
 **Webpage:**  
 https://patrykchrabaszcz.github.io/Imagenet32/
