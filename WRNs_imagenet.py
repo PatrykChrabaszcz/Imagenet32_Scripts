@@ -59,7 +59,7 @@ def unpickle(file):
 
 
 # Mean image can be extracted from any training data file
-def load_validation_data(data_folder, mean_image, img_size='32x32'):
+def load_validation_data(data_folder, mean_image, img_size=32):
     test_file = os.path.join(data_folder, 'val_data')
 
     d = unpickle(test_file)
@@ -73,21 +73,17 @@ def load_validation_data(data_folder, mean_image, img_size='32x32'):
     # Remove mean (computed from training data) from images
     x -= mean_image
 
-    if img_size == '32x32':
-        x = np.dstack((x[:, :1024], x[:, 1024:2048], x[:, 2048:]))
-        x = x.reshape((x.shape[0], 32, 32, 3)).transpose(0, 3, 1, 2)
-    elif img_size == '64x64':
-        x = np.dstack((x[:, :4096], x[:, 4096:8192], x[:, 8192:]))
-        x = x.reshape((x.shape[0], 64, 64, 3)).transpose(0, 3, 1, 2)
-    else:
-        raise NotImplementedError
+    img_size2 = img_size * img_size
+
+    x = np.dstack((x[:, :img_size2], x[:, img_size2:2*img_size2], x[:, 2*img_size2:]))
+    x = x.reshape((x.shape[0], img_size, img_size, 3)).transpose(0, 3, 1, 2)
 
     return dict(
         X_test=lasagne.utils.floatX(x),
         Y_test=y.astype('int32'))
 
 
-def load_databatch(data_folder, idx, img_size='32x32'):
+def load_databatch(data_folder, idx, img_size=32):
     data_file = os.path.join(data_folder, 'train_data_batch_')
 
     d = unpickle(data_file + str(idx))
@@ -103,14 +99,11 @@ def load_databatch(data_folder, idx, img_size='32x32'):
     data_size = x.shape[0]
 
     x -= mean_image
-    if img_size == '32x32':
-        x = np.dstack((x[:, :1024], x[:, 1024:2048], x[:, 2048:]))
-        x = x.reshape((x.shape[0], 32, 32, 3)).transpose(0, 3, 1, 2)
-    elif img_size == '64x64':
-        x = np.dstack((x[:, :4096], x[:, 4096:8192], x[:, 8192:]))
-        x = x.reshape((x.shape[0], 64, 64, 3)).transpose(0, 3, 1, 2)
-    else:
-        raise NotImplementedError
+
+    img_size2 = img_size * img_size
+
+    x = np.dstack((x[:, :img_size2], x[:, img_size2:2*img_size2], x[:, 2*img_size2:]))
+    x = x.reshape((x.shape[0], img_size, img_size, 3)).transpose(0, 3, 1, 2)
 
     # create mirrored images
     X_train = x[0:data_size, :, :, :]
@@ -129,14 +122,14 @@ def load_databatch(data_folder, idx, img_size='32x32'):
 # ##################### Build the neural network model #######################
 
 
-def ResNet_FullPre_Wide(input_var=None, nout=10, n=3, k=2, dropoutrate=0, img_size='32x32'):
+def ResNet_FullPre_Wide(input_var=None, nout=10, n=3, k=2, dropoutrate=0, img_size=32):
     '''
     Adapted from https://gist.github.com/FlorianMuellerklein/3d9ba175038a3f2e7de3794fa303f1ee
     which was tweaked to be consistent with 'Identity Mappings in Deep Residual Networks', Kaiming He et al. 2016
     (https://arxiv.org/abs/1603.05027)
     And 'Wide Residual Networks', Sergey Zagoruyko, Nikos Komodakis 2016 (http://arxiv.org/pdf/1605.07146v1.pdf)
     '''
-    n_filters = {0: 16, 1: 16*k, 2: 32*k, 3: 64*k, 4: 128*k}
+    n_filters = {0: 16, 1: int(16*k), 2: int(32*k), 3: int(64*k), 4: int(128*k)}
 
     # create a residual learning building block with two stacked 3x3 convlayers and dropout
     def residual_block(l, increase_dim=False, first=False, filters=16):
@@ -184,14 +177,9 @@ def ResNet_FullPre_Wide(input_var=None, nout=10, n=3, k=2, dropoutrate=0, img_si
         return block
 
     # Building the network
-    if img_size == '32x32':
-        l_in = InputLayer(shape=(None, 3, 32, 32), input_var=input_var)
-    elif img_size == '64x64':
-        l_in = InputLayer(shape=(None, 3, 64, 64), input_var=input_var)
-    else:
-        raise NotImplementedError
+    l_in = InputLayer(shape=(None, 3, img_size, img_size), input_var=input_var)
 
-    # first layer=
+    # first layer
     l = batch_norm(ConvLayer(l_in, num_filters=n_filters[0], filter_size=(3,3), stride=(1,1), nonlinearity=rectify,
                              pad='same', W=HeNormal(gain='relu')))
 
@@ -206,15 +194,10 @@ def ResNet_FullPre_Wide(input_var=None, nout=10, n=3, k=2, dropoutrate=0, img_si
         l = residual_block(l, filters=n_filters[2])
 
     # third stack of residual blocks
+
     l = residual_block(l, increase_dim=True, filters=n_filters[3])
     for _ in range(1, n):
         l = residual_block(l, filters=n_filters[3])
-
-    # fourth stack of residual blocks
-    if img_size == '64x64':
-        l = residual_block(l, increase_dim=True, filters=n_filters[4])
-        for _ in range(1, n):
-            l = residual_block(l, filters=n_filters[4])
 
     bn_post_conv = BatchNormLayer(l)
     bn_post_relu = NonlinearityLayer(bn_post_conv, rectify)
@@ -230,13 +213,7 @@ def ResNet_FullPre_Wide(input_var=None, nout=10, n=3, k=2, dropoutrate=0, img_si
 # ############################# Batch iterator ###############################
 
 
-def iterate_minibatches(inputs, targets, batchsize, shuffle=False, augment=False, img_size='32x32'):
-    if img_size == '32x32':
-        size = 32
-    elif img_size == '64x64':
-        size = 64
-    else:
-        raise NotImplementedError
+def iterate_minibatches(inputs, targets, batchsize, shuffle=False, augment=False, img_size=32):
 
     assert len(inputs) == len(targets)
     if shuffle:
@@ -256,7 +233,7 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False, augment=False
             crops = np.random.random_integers(0, high=8, size=(batchsize, 2))
             for r in range(batchsize):
                 random_cropped[r, :, :, :] = \
-                    padded[r, :, crops[r, 0]:(crops[r, 0]+size), crops[r, 1]:(crops[r, 1]+size)]
+                    padded[r, :, crops[r, 0]:(crops[r, 0]+img_size), crops[r, 1]:(crops[r, 1]+img_size)]
             inp_exc = random_cropped
         else:
             inp_exc = inputs[excerpt]
@@ -267,7 +244,7 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False, augment=False
 # ############################## Main program ################################
 
 def main(data_folder, n=4, irun=1, k=1, num_epochs=40, cont=False, E1=10, E2=20, E3=30, lr=0.1, lr_fac=0.1,
-         reg_fac=0.0005, dropoutrate=0, img_size='32x32'):
+         reg_fac=0.0005, dropoutrate=0, img_size=32):
 
     nout = 1000
     logger = Logger(k, lr, irun)
@@ -294,6 +271,8 @@ def main(data_folder, n=4, irun=1, k=1, num_epochs=40, cont=False, E1=10, E2=20,
     network = ResNet_FullPre_Wide(input_var, nout,  n, k, dropoutrate, img_size)
     logger.log_message("Number of parameters in model: %d" % lasagne.layers.count_params(network, trainable=True))
     print("Number of parameters in model: %d" % lasagne.layers.count_params(network, trainable=True))
+    print('Img Size %d' % img_size)
+    print('K %d' % k)
     # Create a loss expression for training, i.e., a scalar objective we want
     # to minimize (for our multi-class problem, it is the cross-entropy loss):
     prediction = lasagne.layers.get_output(network)
@@ -359,7 +338,9 @@ def main(data_folder, n=4, irun=1, k=1, num_epochs=40, cont=False, E1=10, E2=20,
         start_time = time.time()
 
         for idatabatch in range(1, 11):
+            start_time_tmp = time.time()
             data = load_databatch(data_folder, idatabatch, img_size=img_size)
+            print('Data loading took %f' % (time.time() - start_time_tmp))
             X_train = data['X_train']
             Y_train = data['Y_train']
 
@@ -377,6 +358,7 @@ def main(data_folder, n=4, irun=1, k=1, num_epochs=40, cont=False, E1=10, E2=20,
             logger.log_message("idatabatch#{} took {:.3f}s".format(idatabatch, time.time() - start_time))
             del data, X_train, Y_train
 
+        print('Train Data pass took: %f' % (time.time() - start_time))
         # And a full pass over the validation data:
         val_err = 0
         val_acc_1 = 0
@@ -390,6 +372,7 @@ def main(data_folder, n=4, irun=1, k=1, num_epochs=40, cont=False, E1=10, E2=20,
             val_acc_5 += acc_5
             val_batches += 1
 
+        print('Epoch took: %f' % (time.time() - start_time))
         # Then we print the results for this epoch:
         logger.log_message("Epoch {} of {} took {:.3f}s".format(epoch + 1, num_epochs, time.time() - start_time))
         logger.log_message("  training loss:\t\t{:.6f}".format(train_err / train_batches))
@@ -440,12 +423,12 @@ def main(data_folder, n=4, irun=1, k=1, num_epochs=40, cont=False, E1=10, E2=20,
 def parse_arguments():
     parser = ArgumentParser()
     parser.add_argument('-s', '--img_size', help="Size of images, represented as string '32x32' or '64x64'",
-                        default='32x32', type=str)
+                        default=32, type=int)
     parser.add_argument('-lr', '--learning_rate', help="Starting Learning Rate, "
                                                        "decreased by the factor of 5 every 10 epochs",
                         default=0.01, type=float)
     parser.add_argument('-k', '--network_width', help="Network width hyper-parameter. Number of filters in each layer "
-                                                      "is multiplied by this factor", default=1, type=int)
+                                                      "is multiplied by this factor", default=1, type=float)
     parser.add_argument('-r', '--run', help="Number used to index output files, helpful when multiple runs required",
                         default=1, type=int)
     parser.add_argument('-c', '--cont', help="Read last saved model and continue training from that point",
