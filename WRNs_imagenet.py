@@ -194,10 +194,16 @@ def ResNet_FullPre_Wide(input_var=None, nout=10, n=3, k=2, dropoutrate=0, img_si
         l = residual_block(l, filters=n_filters[2])
 
     # third stack of residual blocks
+    if img_size >= 32:
+        l = residual_block(l, increase_dim=True, filters=n_filters[3])
+        for _ in range(1, n):
+            l = residual_block(l, filters=n_filters[3])
 
-    l = residual_block(l, increase_dim=True, filters=n_filters[3])
-    for _ in range(1, n):
-        l = residual_block(l, filters=n_filters[3])
+    # fourth stack of residual blocks
+    if img_size >= 64:
+        l = residual_block(l, increase_dim=True, filters=n_filters[4])
+        for _ in range(1, n):
+            l = residual_block(l, filters=n_filters[4])
 
     bn_post_conv = BatchNormLayer(l)
     bn_post_relu = NonlinearityLayer(bn_post_conv, rectify)
