@@ -6,6 +6,8 @@ import os
 from scipy import misc
 import numpy as np
 
+import imageio
+
 def parse_arguments():
     parser = ArgumentParser()
     parser.add_argument('-i', '--in_dir', help="Input directory with source images")
@@ -20,6 +22,8 @@ def process_folder(in_dir, out_dir):
     label_dict = get_label_dict()
     folders = get_ordered_folders()
 
+    folders = [dir for dir in sorted(os.listdir(in_dir)) if os.path.isdir(os.path.join(in_dir, dir))]
+
     # Here subsample folders (If desired) [1*]
     # folders = folders[0::10]
     # folders = folders[900:902]
@@ -28,14 +32,15 @@ def process_folder(in_dir, out_dir):
     data_list_train = []
     labels_list_train = []
 
-    for folder in folders:
+    for i, folder in enumerate(folders):
         label = label_dict[folder]
         print("Processing images from folder %s as label %d" % (folder, label))
         # Get images from this folder
         images = []
         for image_name in os.listdir(os.path.join(in_dir, folder)):
+
             try:
-                img = misc.imread(os.path.join(in_dir, folder, image_name))
+                img = imageio.imread(os.path.join(in_dir, folder, image_name))
                 r = img[:, :, 0].flatten()
                 g = img[:, :, 1].flatten()
                 b = img[:, :, 2].flatten()
