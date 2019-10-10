@@ -78,7 +78,7 @@ if __name__ == '__main__':
         
     x = [i for i in range(1000)]
     ax = plt.axes()
-    plt.bar(left=x, height=graph, color='darkblue', edgecolor='darkblue')
+    plt.bar(x, height=graph, color='darkblue', edgecolor='darkblue')
     ax.set_xlabel('Class', fontsize=20)
     ax.set_ylabel('Samples', fontsize=20)
     plt.tick_params(axis='both', which='major', labelsize=15)

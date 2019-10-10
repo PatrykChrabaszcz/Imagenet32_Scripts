@@ -5,6 +5,7 @@ from utils import *
 import os
 from scipy import misc
 import numpy as np
+import imageio
 
 def parse_arguments():
     parser = ArgumentParser()
@@ -14,11 +15,10 @@ def parse_arguments():
 
     return args.in_dir, args.out_dir
 
-
 # Strong assumption about in_dir and out_dir (They must contain proper data)
 def process_folder(in_dir, out_dir):
     label_dict = get_label_dict()
-    folders = get_ordered_folders()
+    folders = [dir for dir in sorted(os.listdir(in_dir)) if os.path.isdir(os.path.join(in_dir, dir))]
 
     # Here subsample folders (If desired) [1*]
     # folders = folders[0::10]
@@ -28,14 +28,14 @@ def process_folder(in_dir, out_dir):
     data_list_train = []
     labels_list_train = []
 
-    for folder in folders:
+    for i, folder in enumerate(folders):
         label = label_dict[folder]
         print("Processing images from folder %s as label %d" % (folder, label))
         # Get images from this folder
         images = []
         for image_name in os.listdir(os.path.join(in_dir, folder)):
             try:
-                img = misc.imread(os.path.join(in_dir, folder, image_name))
+                img = imageio.imread(os.path.join(in_dir, folder, image_name))
                 r = img[:, :, 0].flatten()
                 g = img[:, :, 1].flatten()
                 b = img[:, :, 2].flatten()
@@ -46,14 +46,11 @@ def process_folder(in_dir, out_dir):
                 continue
             arr = np.array(list(r) + list(g) + list(b), dtype=np.uint8)
             images.append(arr)
-
         data = np.row_stack(images)
         samples_num = data.shape[0]
         labels = [label] * samples_num
-
         labels_list_train.extend(labels)
         data_list_train.append(data)
-
         print('Label: %d: %s has %d samples' % (label, folder, samples_num))
 
     x = np.concatenate(data_list_train, axis=0)
