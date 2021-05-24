@@ -3,7 +3,7 @@
 from argparse import ArgumentParser
 import numpy as np
 import os
-from scipy import misc
+from matplotlib.pyplot import imread
 from utils import *
 
 
@@ -45,7 +45,7 @@ def process_folder(in_dir, out_dir):
         if label not in labels_searched:
             continue
         try:
-            img = misc.imread(os.path.join(in_dir, image_name))
+            img = imread(os.path.join(in_dir, image_name))
             r = img[:, :, 0].flatten()
             g = img[:, :, 1].flatten()
             b = img[:, :, 2].flatten()
