@@ -3,8 +3,12 @@
 from argparse import ArgumentParser
 from utils import *
 import os
-from scipy import misc
+from imageio import imread
 import numpy as np
+
+from PIL import PngImagePlugin
+LARGE_ENOUGH_NUMBER = 100
+PngImagePlugin.MAX_TEXT_CHUNK = LARGE_ENOUGH_NUMBER * (1024**2)
 
 def parse_arguments():
     parser = ArgumentParser()
@@ -35,7 +39,7 @@ def process_folder(in_dir, out_dir):
         images = []
         for image_name in os.listdir(os.path.join(in_dir, folder)):
             try:
-                img = misc.imread(os.path.join(in_dir, folder, image_name))
+                img = imread(os.path.join(in_dir, folder, image_name))
                 r = img[:, :, 0].flatten()
                 g = img[:, :, 1].flatten()
                 b = img[:, :, 2].flatten()

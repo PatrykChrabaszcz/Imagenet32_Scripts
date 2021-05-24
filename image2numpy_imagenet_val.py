@@ -3,9 +3,12 @@
 from argparse import ArgumentParser
 import numpy as np
 import os
-from scipy import misc
+from imageio import imread
 from utils import *
 
+from PIL import PngImagePlugin
+LARGE_ENOUGH_NUMBER = 100
+PngImagePlugin.MAX_TEXT_CHUNK = LARGE_ENOUGH_NUMBER * (1024**2)
 
 def parse_arguments():
     parser = ArgumentParser()
@@ -45,7 +48,7 @@ def process_folder(in_dir, out_dir):
         if label not in labels_searched:
             continue
         try:
-            img = misc.imread(os.path.join(in_dir, image_name))
+            img = imread(os.path.join(in_dir, image_name))
             r = img[:, :, 0].flatten()
             g = img[:, :, 1].flatten()
             b = img[:, :, 2].flatten()
