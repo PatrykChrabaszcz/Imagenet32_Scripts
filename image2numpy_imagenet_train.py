@@ -3,7 +3,7 @@
 from argparse import ArgumentParser
 from utils import *
 import os
-from matplotlib.pyplot import imread
+from imageio import imread
 import numpy as np
 
 def parse_arguments():
