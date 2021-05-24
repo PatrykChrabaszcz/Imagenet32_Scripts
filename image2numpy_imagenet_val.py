@@ -6,6 +6,9 @@ import os
 from imageio import imread
 from utils import *
 
+from PIL import PngImagePlugin
+LARGE_ENOUGH_NUMBER = 100
+PngImagePlugin.MAX_TEXT_CHUNK = LARGE_ENOUGH_NUMBER * (1024**2)
 
 def parse_arguments():
     parser = ArgumentParser()
